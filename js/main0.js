@@ -47,8 +47,8 @@ function checkBrowser() {
 //}
 
 function setColHeight() {
-    var $leftCol = $(".columns__left-content");
-    var $rightCol = $(".columns__right-content");
+    var $leftCol = $(".b-body__content");
+    var $rightCol = $(".b-body__aside");
 
     var leftColHeight = $leftCol.height();
     var rightColHeight = $rightCol.height();
@@ -60,18 +60,18 @@ function setColHeight() {
         // правая больше
         $leftCol.css('height', rightColHeight + 'px');
 //        console.log('правая (' + rightColHeight + ') больше левой (' + leftColHeight + ')');
-    } else {
+//    } else {
 //        console.log('колонки равны');
     }
 //    console.log('левая: ' + $leftCol.height() + ' правая: ' + $rightCol.height());
 }
 
 function topYLimit() {
-    return $(".columns__right-content").offset().top;
+    return $(".b-body__aside").offset().top;
 }
 
 function bottomYLimit() {
-    return topYLimit() + $(".columns__right-content").height();
+    return topYLimit() + $(".b-body__aside").height();
 }
 
 function fixTopicsIfNeed() {
@@ -86,7 +86,7 @@ function fixTopicsIfNeed() {
         };
 //        console.log('стандартное положение');
     } else {
-        if ($(window).scrollTop() + $('.aside').height() >= bottomYLimit()) {
+        if ($(window).scrollTop() + $('.b-topics-list').height() >= bottomYLimit()) {
             // зафиксированно снизу
             css_properties = {
                 position: 'absolute',
@@ -104,10 +104,82 @@ function fixTopicsIfNeed() {
 //            console.log('зафиксированно сверху');
         }
     }
-    $('.aside').css(css_properties);
+    $('.b-topics-list').css(css_properties);
+}
+
+
+
+function eachMenuItem(itemsSelector, callback) {
+    $('nav.cats a' + itemsSelector).each(function () {
+        var totalWidth;
+        if ($(this).data('width')) {
+            totalWidth = $(this).data('width');
+        } else {
+            totalWidth = $(this).width() + parseInt($(this).css('margin-left')) + parseInt($(this).css('margin-right'));
+        }
+        callback($(this), totalWidth);
+    });
+}
+
+function commonWidthFor(itemsSelector) {
+    var result = 0;
+    eachMenuItem(itemsSelector, function (_, itemWidth) {
+        result += itemWidth;
+    });
+    return result;
+}
+
+function recalculateMenu() {
+    var $moreButton = $('.cats__wrap'),
+        $moreList = $('.cats__list'),
+        $cats = $('.cats'),
+        moreButtonWidth = $moreButton.width(),
+        width = $cats.width() - moreButtonWidth; // Чтобы не съезжала кнопка "Ещё"
+
+    var commonWidth = commonWidthFor('.cats__item');
+    console.log('total width: ' + commonWidth);
+    console.log('width: ' + width);
+
+    function moveToHidden($item) {
+        $item.removeClass('cats__item').addClass('cats__list-item');
+        $moreList.append($item);
+    }
+
+    function moveToVisible($item) {
+        $item.removeClass('cats__list-item').addClass('cats__item');
+        $moreButton.before($item);
+    }
+
+    if (width < commonWidth) {
+        width -= moreButtonWidth;
+        eachMenuItem('.cats__item', function ($item, itemWidth) {
+            if (itemWidth > width) {
+                if (!$item.data('width')) {
+                    $item.data('width', itemWidth);
+                }
+                moveToHidden($item);
+                console.log($item.html() + " jump");
+            } else {
+                width -= itemWidth;
+                console.log($item.html() + ": -" + $item.width() + " = " + width);
+            }
+        });
+    } else {
+        var commonHiddenWidth = commonWidthFor('.cats__list-item');
+        if (commonWidth + commonHiddenWidth > width) {
+            commonWidth += moreButtonWidth;
+        }
+        eachMenuItem('.cats__list-item', function ($item, itemWidth) {
+            if (commonWidth + itemWidth <= width) {
+                moveToVisible($item);
+                commonWidth += itemWidth;
+            }
+        });
+    }
 }
 
 function reDraw() {
+    recalculateMenu();
 //    checkScroll();
     setColHeight();
     fixTopicsIfNeed();
@@ -116,23 +188,22 @@ function reDraw() {
 
 $(function(){
     checkBrowser();
-
     $(document).on('scroll', fixTopicsIfNeed);
     $(window).load(reDraw);
     $(window).resize(reDraw);
-
+    
+    // Обработка клика по кнопке "Ещё"
     $('.cats__button').click(function(e) {
         var $catsList = $(this).next('.cats__list');
         $catsList.show();
         $(this).parent().addClass('cats__wrap_active');
         var _click = true;
-        $(document).bind('click.myEvent', function(e) {
-            if ( !_click && ($catsList.is(":visible")==true) ) {
+        $(document).bind('click', function(e) {
+            if ( !_click && ($catsList.is(":visible") == true) ) {
                 $catsList.hide().parent('.cats__wrap').removeClass('cats__wrap_active');
-                $(document).unbind('click.myEvent');
+                $(document).unbind('click');
             }
             _click = false;
-
         });
     });
 

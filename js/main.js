@@ -47,8 +47,8 @@ function checkBrowser() {
 //}
 
 function setColHeight() {
-    var $leftCol = $(".b-body__content");
-    var $rightCol = $(".b-body__aside");
+    var $leftCol = $(".columns__left-content");
+    var $rightCol = $(".columns__right-content");
 
     var leftColHeight = $leftCol.height();
     var rightColHeight = $rightCol.height();
@@ -60,18 +60,18 @@ function setColHeight() {
         // правая больше
         $leftCol.css('height', rightColHeight + 'px');
 //        console.log('правая (' + rightColHeight + ') больше левой (' + leftColHeight + ')');
-//    } else {
+    } else {
 //        console.log('колонки равны');
     }
 //    console.log('левая: ' + $leftCol.height() + ' правая: ' + $rightCol.height());
 }
 
 function topYLimit() {
-    return $(".b-body__aside").offset().top;
+    return $(".columns__right-content").offset().top;
 }
 
 function bottomYLimit() {
-    return topYLimit() + $(".b-body__aside").height();
+    return topYLimit() + $(".columns__right-content").height();
 }
 
 function fixTopicsIfNeed() {
@@ -86,7 +86,7 @@ function fixTopicsIfNeed() {
         };
 //        console.log('стандартное положение');
     } else {
-        if ($(window).scrollTop() + $('.b-topics-list').height() >= bottomYLimit()) {
+        if ($(window).scrollTop() + $('.aside').height() >= bottomYLimit()) {
             // зафиксированно снизу
             css_properties = {
                 position: 'absolute',
@@ -104,88 +104,13 @@ function fixTopicsIfNeed() {
 //            console.log('зафиксированно сверху');
         }
     }
-    $('.b-topics-list').css(css_properties);
-}
-
-function eachMenuItem(itemsSelector, callback) {
-    $('nav.cats a' + itemsSelector).each(function () {
-        var totalWidth;
-        if ($(this).data('width')) {
-            totalWidth = $(this).data('width');
-        } else {
-            totalWidth = $(this).width() + parseInt($(this).css('margin-left')) + parseInt($(this).css('margin-right'));
-        }
-        callback($(this), totalWidth);
-    });
-}
-
-function commonWidthFor(itemsSelector) {
-    var result = 0;
-    eachMenuItem(itemsSelector, function (_, itemWidth) {
-        result += itemWidth;
-    });
-    return result;
-}
-
-function recalculateMenu() {
-    var $moreButton = $('.cats__wrap'),
-        moreButtonWidth = $moreButton.width(),
-        $moreList = $('span.cats__list'),
-        $cats = $('nav.cats'),
-        width = $cats.width() - moreButtonWidth; // чтобы не съезжала кнопка ещё
-
-    var commonWidth = commonWidthFor('.cats__item');
-    console.log('total width: ' + commonWidth);
-    console.log('width: ' + width);
-
-    function moveToHidden($item) {
-        $item.removeClass('cats__item').addClass('cats__list-item');
-        $moreList.append($item);
-    }
-
-    function moveToVisible($item) {
-        $item.removeClass('cats__list-item').addClass('cats__item');
-        $moreButton.before($item);
-    }
-
-
-    if (width < commonWidth) {
-        width -= moreButtonWidth;
-        eachMenuItem('.cats__item', function ($item, itemWidth) {
-            if (itemWidth > width) {
-    //            var $item = $(this).detach();
-                if (!$item.data('width')) {
-                    $item.data('width', itemWidth);
-                }
-                moveToHidden($item);
-                console.log($item.html() + " jump");
-            } else {
-                width -= itemWidth;
-                console.log($item.html() + ": -" + $item.width() + " = " + width);
-            }
-        });
-    } else {
-        var commonHiddenWidth = commonWidthFor('.cats__list-item');
-        if (commonWidth + commonHiddenWidth > width) {
-            commonWidth += moreButtonWidth;
-        }
-
-        eachMenuItem('.cats__list-item', function ($item, itemWidth) {
-            if (commonWidth + itemWidth <= width) {
-                moveToVisible($item);
-                commonWidth += itemWidth;
-            }
-        });
-    }
+    $('.aside').css(css_properties);
 }
 
 function reDraw() {
-    recalculateMenu();
-
 //    checkScroll();
     setColHeight();
     fixTopicsIfNeed();
-//    console.log('resize event');
 }
 
 $(function(){
@@ -200,10 +125,10 @@ $(function(){
         $catsList.show();
         $(this).parent().addClass('cats__wrap_active');
         var _click = true;
-        $(document).bind('click.myEvent', function(e) {
-            if ( !_click && ($catsList.is(":visible") == true) ) {
+        $(document).bind('click', function(e) {
+            if ( !_click && ($catsList.is(":visible")==true) ) {
                 $catsList.hide().parent('.cats__wrap').removeClass('cats__wrap_active');
-                $(document).unbind('click.myEvent');
+                $(document).unbind('click');
             }
             _click = false;
 
@@ -214,6 +139,40 @@ $(function(){
 
 
 
+    function log_modal_event(event, modal) {
+        if(typeof console != 'undefined' && console.log) console.log("[event] " + event.type);
+    };
 
+    $(document).on($.modal.BEFORE_BLOCK, log_modal_event);
+    $(document).on($.modal.BLOCK, log_modal_event);
+    $(document).on($.modal.BEFORE_OPEN, log_modal_event);
+    $(document).on($.modal.OPEN, log_modal_event);
+    $(document).on($.modal.BEFORE_CLOSE, log_modal_event);
+    $(document).on($.modal.CLOSE, log_modal_event);
+    $(document).on($.modal.AJAX_SEND, log_modal_event);
+    $(document).on($.modal.AJAX_SUCCESS, log_modal_event);
+    $(document).on($.modal.AJAX_COMPLETE, log_modal_event);
+
+    $('#more').click(function() {
+        $(this).parent().after($(this).parent().next().clone());
+        $.modal.resize();
+        return false;
+    });
+
+    $('#manual-ajax').click(function(event) {
+        event.preventDefault();
+        $.get(this.href, function(html) {
+            $(html).appendTo('body').modal();
+        });
+    });
+
+    $('a[href="#ex5"]').click(function(event) {
+        event.preventDefault();
+        $(this).modal({
+            escapeClose: false,
+            clickClose: false,
+            showClose: false
+        });
+    });
 
 });
